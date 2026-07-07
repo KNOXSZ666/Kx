@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Nạp Xu TikTok</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+        }
+        body {
+            background: #0A0A0A;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 16px;
+        }
+        .container {
+            max-width: 420px;
+            width: 100%;
+            padding-bottom: 40px;
+        }
+
+        /* ===== HEADER ===== */
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 0 16px;
+            border-bottom: 1px solid #1A1A1A;
+            margin-bottom: 20px;
+        }
+        .header .logo-icon {
+            font-size: 28px;
+        }
+        .header .logo-text {
+            font-size: 20px;
+            font-weight: 700;
+            color: #fff;
+        }
+        .header .logo-text span {
+            color: #FE2C55;
+        }
+        .header .balance {
+            margin-left: auto;
+            font-size: 14px;
+            color: #888;
+            background: #1A1A1A;
+            padding: 4px 14px;
+            border-radius: 20px;
+        }
+        .header .balance strong {
+            color: #fff;
+        }
+
+        /* ===== TITLE ===== */
+        .page-title {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .page-sub {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 20px;
+        }
+
+        /* ===== COIN GRID ===== */
+        .coin-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .coin-card {
+            background: #141414;
+            border: 2px solid #222;
+            border-radius: 14px;
+            padding: 18px 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        .coin-card.selected {
+            border-color: #FE2C55;
+            background: #1F0F12;
+            box-shadow: 0 0 20px rgba(254, 44, 85, 0.15);
+        }
+        .coin-card .coins {
+            font-size: 24px;
+            font-weight: 700;
+        }
+        .coin-card .price {
+            font-size: 15px;
+            color: #aaa;
+            margin-top: 4px;
+        }
+        .coin-card .discount {
+            position: absolute;
+            top: -8px;
+            right: 6px;
+            background: #FE2C55;
+            color: #fff;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 10px;
+            border-radius: 12px;
+        }
+        .coin-card .tag {
+            font-size: 11px;
+            color: #4CAF50;
+            margin-top: 4px;
+        }
+
+        /* ===== CUSTOM INPUT ===== */
+        .custom-section {
+            background: #141414;
+            border-radius: 14px;
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            border: 1px solid #222;
+        }
+        .custom-section .label {
+            color: #888;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+        .custom-section input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-size: 18px;
+            font-weight: 600;
+            outline: none;
+            padding: 4px 0;
+            min-width: 0;
+            width: 100%;
+        }
+        .custom-section input::placeholder {
+            color: #444;
+            font-weight: 400;
+            font-size: 14px;
+        }
+        .custom-section .unit {
+            color: #888;
+            font-size: 14px;
+        }
+
+        /* ===== VOUCHER ===== */
+        .voucher-section {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .voucher-section input {
+            flex: 1;
+            background: #141414;
+            border: 1px solid #222;
+            border-radius: 10px;
+            padding: 12px 16px;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+        }
+        .voucher-section input::placeholder {
+            color: #555;
+        }
+        .voucher-section button {
+            background: #2A2A2A;
+            border: none;
+            border-radius: 10px;
+            padding: 0 18px;
+            color: #fff;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .voucher-section button:hover {
+            background: #3A3A3A;
+        }
+
+        /* ===== PAY BUTTON ===== */
+        .btn-pay {
+            background: #FE2C55;
+            color: #fff;
+            border: none;
+            border-radius: 30px;
+            padding: 16px;
+            width: 100%;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin: 8px 0 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-pay:hover {
+            opacity: 0.9;
+            transform: scale(1.01);
+        }
+        .btn-pay:active {
+            transform: scale(0.97);
+        }
+        .btn-pay .icon {
+            font-size: 20px;
+        }
+
+        /* ===== FOOTER ===== */
+        .footer-text {
+            font-size: 11px;
+            color: #555;
+            text-align: center;
+            line-height: 1.6;
+            margin-top: 12px;
+        }
+        .footer-text a {
+            color: #888;
+            text-decoration: none;
+        }
+
+        /* ===== MODAL ===== */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(6px);
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+            padding: 20px;
+        }
+        .modal-overlay.show {
+            display: flex;
+        }
+        .modal-box {
+            background: #1A1A1A;
+            border-radius: 20px;
+            max-width: 380px;
+            width: 100%;
+            padding: 32px 24px 24px;
+            text-align: center;
+            animation: modalPop 0.25s ease;
+        }
+        @keyframes modalPop {
+            0% { transform: scale(0.9); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .modal-box .icon-big {
+            font-size: 56px;
+            margin-bottom: 8px;
+        }
+        .modal-box .modal-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: #4CAF50;
+            margin-bottom: 4px;
+        }
+        .modal-box .modal-desc {
+            font-size: 14px;
+            color: #aaa;
+            margin: 8px 0 16px;
+            line-height: 1.5;
+        }
+        .modal-box .modal-desc strong {
+            color: #fff;
+        }
+        .modal-box .modal-btn {
+            background: #FE2C55;
+            border: none;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 700;
+            padding: 12px 32px;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .modal-box .modal-btn:hover {
+            opacity: 0.9;
+        }
+
+        /* ===== STATUS BAR ===== */
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #555;
+            padding: 8px 0 12px;
+            border-top: 1px solid #141414;
+            margin-top: 12px;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 400px) {
+            .coin-grid { gap: 8px; }
+            .coin-card { padding: 14px 8px; }
+            .coin-card .coins { font-size: 20px; }
+            .custom-section { padding: 10px 12px; }
+            .btn-pay { font-size: 16px; padding: 14px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- ===== HEADER ===== -->
+    <div class="header">
+        <div class="logo-icon">🎵</div>
+        <div class="logo-text">Tik<span>Tok</span></div>
+        <div class="balance">💰 <strong id="balanceDisplay">0</strong> Xu</div>
+    </div>
+
+    <!-- ===== TITLE ===== -->
+    <div class="page-title">Nạp Xu</div>
+    <div class="page-sub">Chọn gói xu bên dưới để nạp</div>
+
+    <!-- ===== COIN GRID ===== -->
+    <div class="coin-grid" id="coinGrid">
+        <!-- Các gói sẽ được render bằng JS -->
+    </div>
+
+    <!-- ===== CUSTOM AMOUNT ===== -->
+    <div class="custom-section">
+        <span class="label">📱 Số xu</span>
+        <input type="number" id="customCoins" placeholder="Nhập số lượng..." min="1" />
+        <span class="unit">Xu</span>
+    </div>
+
+    <!-- ===== VOUCHER ===== -->
+    <div class="voucher-section">
+        <input type="text" id="voucherInput" placeholder="🎫 Nhập mã giảm giá (nếu có)" />
+        <button id="voucherBtn">Áp dụng</button>
+    </div>
+
+    <!-- ===== PAY BUTTON ===== -->
+    <button class="btn-pay" id="payBtn">
+        <span class="icon">💳</span> Nạp ngay
+    </button>
+
+    <!-- ===== FOOTER ===== -->
+    <div class="footer-text">
+        Khi nhấn "Nạp ngay", bạn đồng ý với <a href="#">Điều khoản</a> và <a href="#">Chính sách</a>.<br />
+        <span style="color:#444;">* Xu sẽ được cộng ngay sau khi thanh toán thành công</span>
+    </div>
+
+    <div class="status-bar">
+        <span>🔒 Thanh toán an toàn</span>
+        <span>⚡ Tặng thêm 5%</span>
+        <span>🏦 30+ ngân hàng</span>
+    </div>
+</div>
+
+<!-- ===== MODAL THÀNH CÔNG ===== -->
+<div class="modal-overlay" id="successModal">
+    <div class="modal-box">
+        <div class="icon-big">✅</div>
+        <div class="modal-title">Nạp Xu Thành Công!</div>
+        <div class="modal-desc" id="modalDesc">
+            Bạn đã nạp <strong>100</strong> Xu vào tài khoản.<br />
+            Số dư hiện tại: <strong id="modalBalance">100</strong> Xu
+        </div>
+        <button class="modal-btn" id="modalCloseBtn">👍 Tiếp tục</button>
+    </div>
+</div>
+
+<!-- ===== SCRIPT ===== -->
+<script>
+    (function() {
+        // ---- Dữ liệu gói xu ----
+        const PACKAGES = [
+            { coins: 100, price: 19000, discount: 8, tag: 'Phổ biến' },
+            { coins: 300, price: 49000, discount: 15, tag: 'Tiết kiệm' },
+            { coins: 500, price: 69000, discount: 18, tag: 'Tiết kiệm' },
+            { coins: 1000, price: 129000, discount: 22, tag: 'Siêu tiết kiệm' },
+            { coins: 3000, price: 369000, discount: 25, tag: '🔥 Hot' },
+            { coins: 5000, price: 589000, discount: 30, tag: '💎 VIP' },
+        ];
+
+        // ---- State ----
+        let selectedCoins = 100;
+        let selectedPrice = 19000;
+        let currentBalance = 0;
+        let voucherDiscount = 0;
+
+        // ---- DOM refs ----
+        const grid = document.getElementById('coinGrid');
+        const customInput = document.getElementById('customCoins');
+        const payBtn = document.getElementById('payBtn');
+        const balanceDisplay = document.getElementById('balanceDisplay');
+        const modal = document.getElementById('successModal');
+        const modalDesc = document.getElementById('modalDesc');
+        const modalBalance = document.getElementById('modalBalance');
+        const modalCloseBtn = document.getElementById('modalCloseBtn');
+        const voucherInput = document.getElementById('voucherInput');
+        const voucherBtn = document.getElementById('voucherBtn');
+
+        // ---- Render coin grid ----
+        function renderPackages() {
+            grid.innerHTML = '';
+            PACKAGES.forEach((pkg, index) => {
+                const card = document.createElement('div');
+                card.className = 'coin-card' + (index === 0 ? ' selected' : '');
+                card.dataset.coins = pkg.coins;
+                card.dataset.price = pkg.price;
+                card.dataset.discount = pkg.discount;
+
+                const discountedPrice = pkg.price * (1 - pkg.discount / 100);
+                const formattedPrice = Math.round(discountedPrice / 1000) * 1000;
+
+                card.innerHTML = `
+                    <div class="coins">${pkg.coins.toLocaleString()}</div>
+                    <div class="price">${formattedPrice.toLocaleString()}₫</div>
+                    ${pkg.discount ? `<div class="discount">-${pkg.discount}%</div>` : ''}
+                    ${pkg.tag ? `<div class="tag">${pkg.tag}</div>` : ''}
+                `;
+
+                card.addEventListener('click', function() {
+                    document.querySelectorAll('.coin-card').forEach(c => c.classList.remove('selected'));
+                    this.classList.add('selected');
+                    customInput.value = '';
+                    selectedCoins = parseInt(this.dataset.coins);
+                    selectedPrice = parseInt(this.dataset.price);
+                    updatePayButton();
+                });
+
+                grid.appendChild(card);
+            });
+
+            // Set default selected
+            const first = grid.querySelector('.coin-card');
+            if (first) {
+                selectedCoins = parseInt(first.dataset.coins);
+                selectedPrice = parseInt(first.dataset.price);
+                updatePayButton();
+            }
+        }
+
+        // ---- Update pay button ----
+        function updatePayButton() {
+            let finalPrice = selectedPrice;
+            let discountText = '';
+            if (voucherDiscount > 0) {
+                finalPrice = Math.round(finalPrice * (1 - voucherDiscount / 100));
+                discountText = ` (đã giảm ${voucherDiscount}%)`;
+            }
+            payBtn.innerHTML = `<span class="icon">💳</span> Nạp ${selectedCoins.toLocaleString()} Xu - ${finalPrice.toLocaleString()}₫${discountText}`;
+        }
+
+        // ---- Apply voucher ----
+        voucherBtn.addEventListener('click', function() {
+            const code = voucherInput.value.trim().toUpperCase();
+            if (!code) {
+                alert('Vui lòng nhập mã giảm giá.');
+                return;
+            }
+            // Mã giảm ảo
+            if (code === 'KNOX10') {
+                voucherDiscount = 10;
+                alert('✅ Áp dụng mã KNOX10: giảm 10%');
+            } else if (code === 'KNOX20') {
+                voucherDiscount = 20;
+                alert('✅ Áp dụng mã KNOX20: giảm 20%');
+            } else if (code === 'VIP50') {
+                voucherDiscount = 50;
+                alert('✅ Áp dụng mã VIP50: giảm 50%');
+            } else {
+                voucherDiscount = 0;
+                alert('❌ Mã không hợp lệ hoặc đã hết hạn.');
+            }
+            updatePayButton();
+        });
+
+        // ---- Custom input ----
+        customInput.addEventListener('input', function() {
+            const val = parseInt(this.value);
+            if (val && val > 0) {
+                document.querySelectorAll('.coin-card').forEach(c => c.classList.remove('selected'));
+                selectedCoins = val;
+                selectedPrice = val * 190; // giá ảo
+                voucherDiscount = 0;
+                voucherInput.value = '';
+                updatePayButton();
+            }
+        });
+
+        // ---- Pay button ----
+        payBtn.addEventListener('click', function() {
+            let finalPrice = selectedPrice;
+            if (voucherDiscount > 0) {
+                finalPrice = Math.round(finalPrice * (1 - voucherDiscount / 100));
+            }
+
+            // Cộng xu ảo
+            currentBalance += selectedCoins;
+            balanceDisplay.textContent = currentBalance.toLocaleString();
+
+            // Hiển thị modal
+            modalDesc.innerHTML = `
+                Bạn đã nạp <strong>${selectedCoins.toLocaleString()}</strong> Xu vào tài khoản.<br />
+                Giá trị: <strong>${finalPrice.toLocaleString()}₫</strong>
+                ${voucherDiscount > 0 ? `<br />🎫 Đã áp dụng giảm ${voucherDiscount}%` : ''}
+            `;
+            modalBalance.textContent = currentBalance.toLocaleString();
+            modal.classList.add('show');
+
+            // Reset voucher sau khi nạp
+            voucherDiscount = 0;
+            voucherInput.value = '';
+            updatePayButton();
+        });
+
+        // ---- Close modal ----
+        modalCloseBtn.addEventListener('click', function() {
+            modal.classList.remove('show');
+        });
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) modal.classList.remove('show');
+        });
+
+        // ---- Init ----
+        renderPackages();
+        updatePayButton();
+
+        // Thêm style cho modal button
+        const style = document.createElement('style');
+        style.textContent = `
+            .modal-box .modal-btn { background: #FE2C55; border: none; color: #fff; font-size: 16px; font-weight: 700; padding: 12px 32px; border-radius: 30px; cursor: pointer; transition: 0.2s; }
+            .modal-box .modal-btn:hover { opacity: 0.9; }
+        `;
+        document.head.appendChild(style);
+
+        console.log('✅ Fake TikTok Coin Recharge ready!');
+        console.log('💰 Mày có thể test nạp xu ảo thoải mái.');
+    })();
+</script>
+</body>
+  </html>
