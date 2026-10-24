@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Noise Engine</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <h1>NOISE ENGINE</h1>
+  <div class="sub">Boost cực cao • Tạp tách riêng • Auto-duck khi nói</div>
+</header>
+
+<main>
+
+  <!-- FILE INPUT -->
+  <section class="card">
+    <label class="file-label">Chọn file ghi âm</label>
+    <input type="file" id="fileInput" accept="audio/*">
+    <div class="file-name" id="fileName"></div>
+    <div class="status" id="statusMsg"></div>
+  </section>
+
+  <!-- VOICE CHAIN -->
+  <section class="card">
+    <h2>🎤 VOICE — Giọng</h2>
+    <div class="row">
+      <span class="label">Gain 1</span>
+      <span class="val" id="vg1V">1x</span>
+    </div>
+    <input type="range" id="vg1" min="1" max="100" step="1" value="1">
+
+    <div class="row">
+      <span class="label">Gain 2</span>
+      <span class="val" id="vg2V">1x</span>
+    </div>
+    <input type="range" id="vg2" min="1" max="50" step="1" value="1">
+
+    <div class="row">
+      <span class="label">Gain 3</span>
+      <span class="val" id="vg3V">1x</span>
+    </div>
+    <input type="range" id="vg3" min="1" max="20" step="1" value="1">
+
+    <div class="row">
+      <span class="label">Tổng voice gain</span>
+      <span class="val total" id="vTotalV">1x</span>
+    </div>
+
+    <hr>
+
+    <div class="row">
+      <span class="label">Distortion</span>
+      <span class="val" id="vDistV">0%</span>
+    </div>
+    <input type="range" id="vDist" min="0" max="100" step="1" value="0">
+
+    <div class="row">
+      <span class="label">Low-cut</span>
+      <span class="val" id="vLowV">0 Hz</span>
+    </div>
+    <input type="range" id="vLow" min="0" max="2000" step="10" value="0">
+
+    <div class="row">
+      <span class="label">High-cut</span>
+      <span class="val" id="vHighV">20000 Hz</span>
+    </div>
+    <input type="range" id="vHigh" min="500" max="20000" step="100" value="20000">
+  </section>
+
+  <!-- NOISE CHAIN -->
+  <section class="card">
+    <h2>💥 NOISE — Tạp</h2>
+
+    <div class="row">
+      <span class="label">Loại tạp</span>
+    </div>
+    <select id="nType">
+      <option value="white">White — xì xì</option>
+      <option value="pink">Pink — rè tự nhiên</option>
+      <option value="brown">Brown — ù trầm</option>
+      <option value="blue">Blue — rít cao</option>
+      <option value="violet">Violet — rít cực cao</option>
+      <option value="hum50">Hum 50Hz — ù điện VN</option>
+      <option value="hum60">Hum 60Hz — ù điện US</option>
+      <option value="crackle">Crackle — nổ lách tách</option>
+      <option value="vinyl">Vinyl — đĩa than</option>
+      <option value="tapehiss">Tape hiss — băng cũ</option>
+      <option value="radio">Radio static — sóng yếu</option>
+      <option value="glitch">Glitch — nhiễu số</option>
+      <option value="machinegun" selected>Machine gun — súng liên thanh</option>
+      <option value="gunshot">Gunshot heavy — súng nặng</option>
+      <option value="burst">Burst — chùm nổ nhanh</option>
+      <option value="dropout">Dropout — rớt tín hiệu</option>
+    </select>
+
+    <div class="row">
+      <span class="label">Volume tạp (max)</span>
+      <span class="val" id="nVolV">50%</span>
+    </div>
+    <input type="range" id="nVol" min="0" max="200" step="1" value="50">
+
+    <div class="row">
+      <span class="label">Boost tạp</span>
+      <span class="val" id="nBoostV">1x</span>
+    </div>
+    <input type="range" id="nBoost" min="1" max="100" step="1" value="1">
+
+    <div class="row">
+      <span class="label">Tốc độ bắn (machine gun)</span>
+      <span class="val" id="nRateV">20/s</span>
+    </div>
+    <input type="range" id="nRate" min="2" max="80" step="1" value="20">
+
+    <div class="row">
+      <span class="label">Độ dài mỗi tiếng (ms)</span>
+      <span class="val" id="nDurV">40ms</span>
+    </div>
+    <input type="range" id="nDur" min="5" max="200" step="5" value="40">
+
+    <hr>
+
+    <div class="row">
+      <span class="label">Duck khi nói (sidechain)</span>
+      <input type="checkbox" id="nDuck" checked>
+    </div>
+
+    <div class="row">
+      <span class="label">Mức duck khi nói</span>
+      <span class="val" id="nDuckAmtV">60%</span>
+    </div>
+    <input type="range" id="nDuckAmt" min="0" max="100" step="1" value="60">
+
+    <div class="row">
+      <span class="label">Ngưỡng voice (dB)</span>
+      <span class="val" id="nThreshV">-30 dB</span>
+    </div>
+    <input type="range" id="nThresh" min="-60" max="0" step="1" value="-30">
+
+    <div class="row">
+      <span class="label">Tốc độ phản ứng (ms)</span>
+      <span class="val" id="nReactV">80 ms</span>
+    </div>
+    <input type="range" id="nReact" min="10" max="500" step="10" value="80">
+  </section>
+
+  <!-- MASTER -->
+  <section class="card">
+    <h2>🎚 MASTER</h2>
+    <div class="row">
+      <span class="label">Master volume</span>
+      <span class="val" id="mVolV">100%</span>
+    </div>
+    <input type="range" id="mVol" min="0" max="200" step="1" value="100">
+
+    <div class="row">
+      <span class="label">Hard clip</span>
+      <input type="checkbox" id="mClip">
+    </div>
+  </section>
+
+  <!-- ACTIONS -->
+  <section class="card">
+    <button class="primary" id="playBtn">▶ Phát thử</button>
+    <button class="secondary" id="stopBtn">⏹ Dừng</button>
+
+    <hr>
+
+    <label>Chất lượng MP3</label>
+    <select id="mp3Q">
+      <option value="128">128 kbps</option>
+      <option value="192" selected>192 kbps</option>
+      <option value="320">320 kbps</option>
+    </select>
+    <button class="danger" id="exportBtn">💾 Xuất MP3</button>
+    <div class="status" id="exportStatus"></div>
+  </section>
+
+</main>
+
+<script src="lame.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
