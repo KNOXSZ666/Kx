@@ -2,7 +2,7 @@
 const els = {};
 [
   'fileInput','fileName','statusMsg',
-  'vg1','vg1V','vg2','vg2V','vg3','vg3V','vTotalV',
+  'vg1','vg1V','vg2','vg2V','vg3','vg3V','vg4','vg4V','vg5','vg5V','vTotalV',
   'vDist','vDistV','vLow','vLowV','vHigh','vHighV',
   'nType','nVol','nVolV','nBoost','nBoostV','nRate','nRateV','nDur','nDurV',
   'nDuck','nDuckAmt','nDuckAmtV','nThresh','nThreshV','nReact','nReactV',
@@ -14,8 +14,6 @@ let audioCtx = null;
 let audioBuffer = null;
 let playing = false;
 let liveNodes = [];
-let voiceSrc = null;
-let noiseSrc = null;
 
 function setStatus(t, target = 'statusMsg') { els[target].textContent = t; }
 
@@ -26,13 +24,17 @@ function ensureCtx() {
 }
 
 function totalVoiceGain() {
-  return parseFloat(els.vg1.value) * parseFloat(els.vg2.value) * parseFloat(els.vg3.value);
+  return parseFloat(els.vg1.value) * parseFloat(els.vg2.value) *
+         parseFloat(els.vg3.value) * parseFloat(els.vg4.value) *
+         parseFloat(els.vg5.value);
 }
 
 function updateLabels() {
   els.vg1V.textContent = els.vg1.value + 'x';
   els.vg2V.textContent = els.vg2.value + 'x';
   els.vg3V.textContent = els.vg3.value + 'x';
+  els.vg4V.textContent = els.vg4.value + 'x';
+  els.vg5V.textContent = els.vg5.value + 'x';
   els.vTotalV.textContent = totalVoiceGain().toLocaleString() + 'x';
   els.vDistV.textContent = els.vDist.value + '%';
   els.vLowV.textContent = els.vLow.value + ' Hz';
@@ -47,14 +49,12 @@ function updateLabels() {
   els.mVolV.textContent = els.mVol.value + '%';
 }
 
-['vg1','vg2','vg3','vDist','vLow','vHigh','nVol','nBoost','nRate','nDur','nDuckAmt','nThresh','nReact','mVol']
+['vg1','vg2','vg3','vg4','vg5','vDist','vLow','vHigh','nVol','nBoost','nRate','nDur','nDuckAmt','nThresh','nReact','mVol']
   .forEach(id => els[id].oninput = () => { updateLabels(); if (playing) rebuildLive(); });
 ['nType','nDuck','mClip']
   .forEach(id => els[id].onchange = () => { if (playing) rebuildLive(); });
 
 // ============== NOISE GENERATORS ==============
-
-// non-machinegun noise buffer
 function makeNoiseBuffer(ctx, type, duration) {
   const sr = ctx.sampleRate;
   const len = Math.floor(sr * duration);
@@ -161,18 +161,50 @@ function makeNoiseBuffer(ctx, type, duration) {
       for (let j = 0; j < gapLen && i+j < len; j++) d[i+j] = 0;
       i += gapLen + Math.floor(sr * (0.1 + Math.random() * 0.3));
     }
+  } else if (type === 'engine') {
+    // engine rumble: low freq thump + irregular sputter + mid noise
+    let phase1 = 0, phase2 = 0;
+    for (let i = 0; i < len; i++) {
+      const t = i / sr;
+      // base firing rate wobbles between 60-140Hz
+      const f = 60 + 40 * Math.sin(t * 0.7) + 20 * Math.sin(t * 2.3);
+      phase1 += (2 * Math.PI * f) / sr;
+      phase2 += (2 * Math.PI * f * 0.5) / sr;
+      const thump = Math.sin(phase1) * 0.5 + Math.sin(phase2) * 0.3;
+      const sputter = Math.random() < 0.002 ? (Math.random() * 2 - 1) * 0.8 : 0;
+      const mid = (Math.random() * 2 - 1) * 0.15;
+      const env = 0.7 + 0.3 * Math.sin(t * 1.3);
+      d[i] = (thump * env + sputter + mid) * 0.9;
+    }
+  } else if (type === 'taser') {
+    // taser: high-voltage zap with rapid pulses and crackle
+    for (let i = 0; i < len; i++) d[i] = 0;
+    let i = 0;
+    while (i < len) {
+      // zap burst: 40-120ms of very high freq oscillation + dense crackle
+      const burstLen = Math.floor(sr * (0.04 + Math.random() * 0.08));
+      const burstAmp = 0.6 + Math.random() * 0.4;
+      const buzzFreq = 1800 + Math.random() * 800;
+      for (let j = 0; j < burstLen && i + j < len; j++) {
+        const tt = j / sr;
+        const env = Math.min(1, j / 50) * Math.exp(-tt * 15);
+        const buzz = Math.sign(Math.sin(2 * Math.PI * buzzFreq * tt)) * 0.5;
+        const crack = (Math.random() * 2 - 1) * 0.7;
+        d[i + j] += (buzz + crack) * burstAmp * env;
+      }
+      // pause between zaps
+      i += burstLen + Math.floor(sr * (0.05 + Math.random() * 0.25));
+    }
   }
   return buf;
 }
 
-// machine gun noise: bang bang bang, faster than generic white
 function makeMachineGunBuffer(ctx, duration, rate, shotDurMs) {
   const sr = ctx.sampleRate;
   const len = Math.floor(sr * duration);
   const buf = ctx.createBuffer(1, len, sr);
   const d = buf.getChannelData(0);
-
-  const interval = 1 / rate; // seconds between shots
+  const interval = 1 / rate;
   const shotDur = shotDurMs / 1000;
   const shotLen = Math.floor(sr * shotDur);
 
@@ -180,12 +212,9 @@ function makeMachineGunBuffer(ctx, duration, rate, shotDurMs) {
   while (t < duration) {
     const start = Math.floor(t * sr);
     if (start >= len) break;
-
-    // each shot: sharp attack, fast decay, low thump + high crack
     const startFreq = 80 + Math.random() * 120;
     const crackGain = 0.7 + Math.random() * 0.3;
     const thumpGain = 0.5 + Math.random() * 0.3;
-
     for (let i = 0; i < shotLen && start + i < len; i++) {
       const tt = i / sr;
       const env = Math.exp(-tt * (60 + Math.random() * 20));
@@ -199,31 +228,23 @@ function makeMachineGunBuffer(ctx, duration, rate, shotDurMs) {
   return buf;
 }
 
-// gunshot heavy: fewer, deeper, more boom
 function makeGunshotBuffer(ctx, duration, rate, shotDurMs) {
   const sr = ctx.sampleRate;
   const len = Math.floor(sr * duration);
   const buf = ctx.createBuffer(1, len, sr);
   const d = buf.getChannelData(0);
-
   const interval = 1 / rate;
-  const shotDur = (shotDurMs * 2) / 1000; // longer tail
+  const shotDur = (shotDurMs * 2) / 1000;
   const shotLen = Math.floor(sr * shotDur);
-
   let t = 0;
   while (t < duration) {
     const start = Math.floor(t * sr);
     if (start >= len) break;
-
     const boomFreq = 50 + Math.random() * 50;
-    const crackGain = 1.0;
-    const boomGain = 1.0;
-
     for (let i = 0; i < shotLen && start + i < len; i++) {
       const tt = i / sr;
-      const env = Math.exp(-tt * 30);
-      const crack = (Math.random() * 2 - 1) * crackGain * Math.exp(-tt * 100);
-      const boom = Math.sin(2 * Math.PI * boomFreq * tt) * boomGain * Math.exp(-tt * 12);
+      const crack = (Math.random() * 2 - 1) * Math.exp(-tt * 100);
+      const boom = Math.sin(2 * Math.PI * boomFreq * tt) * Math.exp(-tt * 12);
       d[start + i] += (crack + boom) * 1.1;
     }
     t += interval;
@@ -231,16 +252,13 @@ function makeGunshotBuffer(ctx, duration, rate, shotDurMs) {
   return buf;
 }
 
-// burst: rapid cluster of shots, then pause
 function makeBurstBuffer(ctx, duration, shotDurMs) {
   const sr = ctx.sampleRate;
   const len = Math.floor(sr * duration);
   const buf = ctx.createBuffer(1, len, sr);
   const d = buf.getChannelData(0);
-
   const shotDur = shotDurMs / 1000;
   const shotLen = Math.floor(sr * shotDur);
-
   let t = 0.1;
   while (t < duration) {
     const clusterSize = 5 + Math.floor(Math.random() * 8);
@@ -263,98 +281,153 @@ function makeBurstBuffer(ctx, duration, shotDurMs) {
   return buf;
 }
 
-// ============== CHAIN BUILD ==============
-// ctx, buffer, destination
+// ============== ENVELOPE FOLLOWER (duck) ==============
+// Uses ScriptProcessor for portability. Output: ConstantSourceNode whose
+// offset tracks 1.0 (loud) -> (1-duckAmount) (ducked) based on voice level.
+function makeSidechainControl(ctx, voiceBuffer, opts) {
+  const threshLinear = Math.pow(10, opts.thresholdDb / 20);
+  const duckAmount = opts.duckAmount;
+  const attackSec = Math.max(0.005, (opts.reactMs / 1000) * 0.5);
+  const releaseSec = Math.max(0.02, (opts.reactMs / 1000) * 2);
+
+  // read voice RMS via ScriptProcessor (feed a COPY of the buffer in)
+  const analyserSrc = ctx.createBufferSource();
+  analyserSrc.buffer = voiceBuffer;
+
+  const preGain = ctx.createGain();
+  preGain.gain.value = 1.0; // match main chain's pre-gain approx (doesn't matter for relative RMS)
+
+  analyserSrc.connect(preGain);
+
+  const blockSize = 1024;
+  const sp = ctx.createScriptProcessor(blockSize, 1, 1);
+
+  const ctrl = ctx.createConstantSource();
+  ctrl.offset.value = 1.0;
+
+  let env = 1.0;
+
+  sp.onaudioprocess = (e) => {
+    const input = e.inputBuffer.getChannelData(0);
+    // RMS
+    let sum = 0;
+    for (let i = 0; i < input.length; i++) sum += input[i] * input[i];
+    const rms = Math.sqrt(sum / input.length);
+
+    const target = rms > threshLinear ? (1 - duckAmount) : 1.0;
+
+    // smooth
+    const coef = target < env ? attackSec : releaseSec;
+    const s = 1 - Math.exp(-1 / (ctx.sampleRate * coef));
+    for (let i = 0; i < input.length; i++) {
+      env += (target - env) * s;
+    }
+    ctrl.offset.value = env;
+
+    // silence output
+    const out = e.outputBuffer.getChannelData(0);
+    for (let i = 0; i < out.length; i++) out[i] = 0;
+  };
+
+  preGain.connect(sp);
+  const sink = ctx.createGain();
+  sink.gain.value = 0;
+  sp.connect(sink);
+  sink.connect(ctx.destination);
+
+  return {
+    node: ctrl,
+    start: () => { analyserSrc.start(); ctrl.start(); },
+    stop: () => { try { analyserSrc.stop(); } catch(e){} try { ctrl.stop(); } catch(e){} },
+    _nodes: [analyserSrc, preGain, sp, sink, ctrl]
+  };
+}
+
+// ============== CHAIN ==============
 function buildChain(ctx, buffer, dest) {
   const nodes = [];
+  const extraSources = [];
 
-  // --- VOICE ---
+  // ---- VOICE ----
   const voiceSrc = ctx.createBufferSource();
   voiceSrc.buffer = buffer;
 
   const vLow = ctx.createBiquadFilter();
-  vLow.type = "highpass";
-  vLow.frequency.value = parseFloat(els.vLow.value);
-  vLow.Q.value = 0.707;
+  vLow.type = "highpass"; vLow.frequency.value = parseFloat(els.vLow.value); vLow.Q.value = 0.707;
 
   const vHigh = ctx.createBiquadFilter();
-  vHigh.type = "lowpass";
-  vHigh.frequency.value = parseFloat(els.vHigh.value);
-  vHigh.Q.value = 0.707;
+  vHigh.type = "lowpass"; vHigh.frequency.value = parseFloat(els.vHigh.value); vHigh.Q.value = 0.707;
 
   const vg1 = ctx.createGain(); vg1.gain.value = parseFloat(els.vg1.value);
   const vg2 = ctx.createGain(); vg2.gain.value = parseFloat(els.vg2.value);
   const vg3 = ctx.createGain(); vg3.gain.value = parseFloat(els.vg3.value);
+  const vg4 = ctx.createGain(); vg4.gain.value = parseFloat(els.vg4.value);
+  const vg5 = ctx.createGain(); vg5.gain.value = parseFloat(els.vg5.value);
 
-  const vDistAmt = parseInt(els.vDist.value) / 100;
   const vDistWS = ctx.createWaveShaper();
-  vDistWS.curve = makeDistCurve(vDistAmt);
+  vDistWS.curve = makeDistCurve(parseInt(els.vDist.value) / 100);
   vDistWS.oversample = "4x";
 
+  // voice chain: src -> HP -> LP -> g1 -> g2 -> g3 -> g4 -> g5 -> dist
   voiceSrc.connect(vLow);
   vLow.connect(vHigh);
   vHigh.connect(vg1);
   vg1.connect(vg2);
   vg2.connect(vg3);
-  vg3.connect(vDistWS);
-  nodes.push(voiceSrc, vLow, vHigh, vg1, vg2, vg3, vDistWS);
-
+  vg3.connect(vg4);
+  vg4.connect(vg5);
+  vg5.connect(vDistWS);
+  nodes.push(voiceSrc, vLow, vHigh, vg1, vg2, vg3, vg4, vg5, vDistWS);
   const voiceOut = vDistWS;
 
-  // --- NOISE ---
-  const noiseOut = ctx.createGain();
-  noiseOut.gain.value = (parseInt(els.nVol.value) / 100) * parseFloat(els.nBoost.value);
-  nodes.push(noiseOut);
-
+  // ---- NOISE ----
   const noiseType = els.nType.value;
   let noiseNode;
   if (noiseType === "machinegun") {
-    const nb = makeMachineGunBuffer(ctx, buffer.duration, parseInt(els.nRate.value), parseInt(els.nDur.value));
     noiseNode = ctx.createBufferSource();
-    noiseNode.buffer = nb;
+    noiseNode.buffer = makeMachineGunBuffer(ctx, buffer.duration, parseInt(els.nRate.value), parseInt(els.nDur.value));
   } else if (noiseType === "gunshot") {
-    const nb = makeGunshotBuffer(ctx, buffer.duration, parseInt(els.nRate.value), parseInt(els.nDur.value));
     noiseNode = ctx.createBufferSource();
-    noiseNode.buffer = nb;
+    noiseNode.buffer = makeGunshotBuffer(ctx, buffer.duration, parseInt(els.nRate.value), parseInt(els.nDur.value));
   } else if (noiseType === "burst") {
-    const nb = makeBurstBuffer(ctx, buffer.duration, parseInt(els.nDur.value));
     noiseNode = ctx.createBufferSource();
-    noiseNode.buffer = nb;
+    noiseNode.buffer = makeBurstBuffer(ctx, buffer.duration, parseInt(els.nDur.value));
   } else {
-    const nb = makeNoiseBuffer(ctx, noiseType, buffer.duration);
     noiseNode = ctx.createBufferSource();
-    noiseNode.buffer = nb;
+    noiseNode.buffer = makeNoiseBuffer(ctx, noiseType, buffer.duration);
     noiseNode.loop = true;
   }
-  noiseNode.connect(noiseOut);
-  nodes.push(noiseNode);
 
-  // --- SIDECHAIN DUCK ---
-  // If duck enabled: when voice is loud, noise volume drops
+  const nVolGain = ctx.createGain();
+  nVolGain.gain.value = (parseInt(els.nVol.value) / 100) * parseFloat(els.nBoost.value);
+
+  noiseNode.connect(nVolGain);
+  nodes.push(noiseNode, nVolGain);
+
+  let noiseOut = nVolGain;
+
+  // ---- SIDECHAIN DUCK ----
   if (els.nDuck.checked) {
-    const duckGain = ctx.createGain();
-    duckGain.gain.value = 1.0;
-    noiseOut.disconnect();
-    noiseOut.connect(duckGain);
-    nodes.push(duckGain);
+    const duck = ctx.createGain();
+    duck.gain.value = 1.0;
+    nVolGain.connect(duck);
 
-    // envelope follower using ScriptProcessor (portable, works in all browsers)
-    const envelope = makeEnvelopeFollower(ctx, buffer, {
+    const sc = makeSidechainControl(ctx, buffer, {
       thresholdDb: parseFloat(els.nThresh.value),
       duckAmount: parseInt(els.nDuckAmt.value) / 100,
       reactMs: parseInt(els.nReact.value)
     });
-    envelope.connect(duckGain.gain);
-    nodes.push(envelope);
-    noiseOut.__duckGain = duckGain;
-    noiseNode.__duckGain = duckGain;
+    sc.node.connect(duck.gain);
+    extraSources.push(sc);
+
+    nodes.push(duck);
+    noiseOut = duck;
   }
 
-  // --- MASTER MIX ---
+  // ---- MASTER ----
   const mix = ctx.createGain();
   voiceOut.connect(mix);
-  if (noiseOut.__duckGain) noiseOut.__duckGain.connect(mix);
-  else noiseOut.connect(mix);
+  noiseOut.connect(mix);
 
   const masterGain = ctx.createGain();
   masterGain.gain.value = parseInt(els.mVol.value) / 100;
@@ -377,116 +450,27 @@ function buildChain(ctx, buffer, dest) {
     start: (when = 0) => {
       voiceSrc.start(when);
       noiseNode.start(when);
+      extraSources.forEach(s => s.start());
     },
     stop: () => {
       try { voiceSrc.stop(); } catch(e){}
       try { noiseNode.stop(); } catch(e){}
+      extraSources.forEach(s => s.stop());
     },
     voiceSrc,
     noiseNode
   };
 }
 
-// ============== SIDECHAIN ENVELOPE FOLLOWER ==============
-// Returns an AudioNode whose output is a control signal (0..1) that
-// DROPS when voice is loud, RISES when voice is quiet.
-// Connect it to duckGain.gain.
-function makeEnvelopeFollower(ctx, voiceBuffer, opts) {
-  const threshLinear = Math.pow(10, opts.thresholdDb / 20);
-  const duckAmount = opts.duckAmount;
-  const attackSec = Math.max(0.005, opts.reactMs / 1000 * 0.5);
-  const releaseSec = Math.max(0.02, opts.reactMs / 1000 * 2);
-
-  // We need to observe the raw voice signal. But we're in an offline/live
-  // graph, and the voice source already connects to the main chain.
-  // Create a second copy for analysis.
-  const analyserSrc = ctx.createBufferSource();
-  analyserSrc.buffer = voiceBuffer;
-
-  const analyserGain = ctx.createGain();
-  analyserGain.gain.value = 0; // silent tap (won't be heard anyway - we don't connect to dest)
-
-  analyserSrc.connect(analyserGain);
-
-  // Use ScriptProcessor to read amplitude per sample
-  const blockSize = 1024;
-  const sp = ctx.createScriptProcessor(blockSize, 1, 1);
-
-  let env = 1.0;
-  let attackCoef = Math.exp(-1 / (ctx.sampleRate * attackSec));
-  let releaseCoef = Math.exp(-1 / (ctx.sampleRate * releaseSec));
-
-  sp.onaudioprocess = (e) => {
-    const input = e.inputBuffer.getChannelData(0);
-    const output = e.outputBuffer.getChannelData(0);
-
-    // run envelope over block
-    let sum = 0;
-    for (let i = 0; i < input.length; i++) {
-      const s = Math.abs(input[i]);
-      sum += s;
-    }
-    const avg = sum / input.length;
-
-    const targetDuck = avg > threshLinear
-      ? (1 - duckAmount) // duck down
-      : 1.0;             // full noise
-
-    // smooth env towards target
-    for (let i = 0; i < output.length; i++) {
-      if (targetDuck < env) env = targetDuck + (env - targetDuck) * attackCoef;
-      else env = targetDuck + (env - targetDuck) * releaseCoef;
-      // sp output becomes control signal (but sp output is audio-rate, we're reusing it)
-      output[i] = env;
-    }
-  };
-
-  analyserGain.connect(sp);
-  // Must connect to something to run. Use zero-gain sink.
-  const sink = ctx.createGain();
-  sink.gain.value = 0;
-  sp.connect(sink);
-  sink.connect(ctx.destination);
-
-  // We return a "virtual node" via a gain we control - but since we need
-  // to plug into duckGain.gain, we can't just return sp because its
-  // output is audio not control.
-  // Simpler approach: use sp to write env into a ConstantSourceNode's offset.
-  const offsetNode = ctx.createConstantSource();
-  offsetNode.offset.value = 1.0;
-  // Override onaudioprocess to set offset
-  sp.onaudioprocess = (e) => {
-    const input = e.inputBuffer.getChannelData(0);
-    let sum = 0;
-    for (let i = 0; i < input.length; i++) sum += Math.abs(input[i]);
-    const avg = sum / input.length;
-
-    const targetDuck = avg > threshLinear ? (1 - duckAmount) : 1.0;
-
-    if (targetDuck < env) env = targetDuck + (env - targetDuck) * attackCoef;
-    else env = targetDuck + (env - targetDuck) * releaseCoef;
-
-    // keep output silence (so no audio leak) - control via offset
-    offsetNode.offset.value = env;
-    const output = e.outputBuffer.getChannelData(0);
-    for (let i = 0; i < output.length; i++) output[i] = 0;
-  };
-
-  analyserSrc.start();
-  offsetNode.start();
-
-  return offsetNode;
-}
-
 // ============== CURVES ==============
 function makeDistCurve(amount) {
   const N = 2048;
   const curve = new Float32Array(N);
-  const k = 1 + amount * 30;
   if (amount === 0) {
     for (let i = 0; i < N; i++) curve[i] = (i / (N - 1)) * 2 - 1;
     return curve;
   }
+  const k = 1 + amount * 30;
   for (let i = 0; i < N; i++) {
     const x = (i / (N - 1)) * 2 - 1;
     curve[i] = Math.tanh(k * x) / Math.tanh(k);
@@ -505,7 +489,7 @@ function makeClipCurve(amount) {
   return curve;
 }
 
-// ============== LIVE PLAY ==============
+// ============== LIVE ==============
 function cleanupLive() {
   liveNodes.forEach(n => { try { n.disconnect(); } catch(e){} });
   liveNodes = [];
@@ -524,7 +508,7 @@ function rebuildLive() {
 }
 
 els.playBtn.onclick = () => {
-  if (!audioBuffer) { setStatus("Chọn file trước đã."); return; }
+  if (!audioBuffer) { setStatus("Chọn file trước."); return; }
   rebuildLive();
   setStatus("Đang phát...");
 };
@@ -550,11 +534,11 @@ els.fileInput.onchange = async (e) => {
   }
 };
 
-// ============== EXPORT MP3 ==============
+// ============== EXPORT ==============
 els.exportBtn.onclick = async () => {
   if (!audioBuffer) { setStatus("Chọn file trước.", 'exportStatus'); return; }
   if (typeof lamejs === "undefined") {
-    setStatus("lame.min.js chưa load. Kiểm tra file trong repo.", 'exportStatus');
+    setStatus("lame.min.js chưa load.", 'exportStatus');
     return;
   }
 
